@@ -5,7 +5,7 @@ from tests.builders.gp2gp import build_transfer
 from tests.builders.spine import build_parsed_conversation, build_message
 
 
-def test_build_transfer_extracts_conversation_id():
+def test_derive_transfer_extracts_conversation_id():
     conversation = build_parsed_conversation(id="1234")
 
     transfer = derive_transfer(conversation)
@@ -15,7 +15,7 @@ def test_build_transfer_extracts_conversation_id():
     assert actual == expected
 
 
-def test_build_transfer_produces_sla_of_successful_conversation():
+def test_derive_transfer_produces_sla_of_successful_conversation():
     conversation = build_parsed_conversation(
         request_completed=build_message(
             time=datetime(year=2020, month=6, day=1, hour=12, minute=42, second=0),
@@ -32,7 +32,7 @@ def test_build_transfer_produces_sla_of_successful_conversation():
     assert actual == expected
 
 
-def test_build_transfer_extracts_requesting_practice_ods():
+def test_derive_transfer_extracts_requesting_practice_ods():
     conversation = build_parsed_conversation(request_started=build_message(from_party_ods="A12345"))
 
     transfer = derive_transfer(conversation)
@@ -42,7 +42,7 @@ def test_build_transfer_extracts_requesting_practice_ods():
     assert actual == expected
 
 
-def test_build_transfer_extracts_sending_practice_ods():
+def test_derive_transfer_extracts_sending_practice_ods():
     conversation = build_parsed_conversation(request_started=build_message(to_party_ods="A12377"))
 
     transfer = derive_transfer(conversation)
@@ -52,13 +52,25 @@ def test_build_transfer_extracts_sending_practice_ods():
     assert actual == expected
 
 
-def test_build_transfer_extracts_error_code():
+def test_derive_transfer_extracts_error_code():
     conversation = build_parsed_conversation(request_completed_ack=build_message(error_code=99))
 
     transfer = derive_transfer(conversation)
 
     expected = 99
     actual = transfer.error_code
+    assert actual == expected
+
+
+def test_derive_transfer_flags_incomplete_conversation_as_pending():
+    conversation = build_parsed_conversation(request_started=build_message(),
+                                             request_completed=build_message(),
+                                             request_completed_ack=None)
+
+    transfer = derive_transfer(conversation)
+
+    expected = True
+    actual = transfer.pending
     assert actual == expected
 
 
@@ -82,3 +94,14 @@ def test_filter_failed_transfers_does_not_exclude_suppressions():
     expected = [suppressed_transfer]
 
     assert list(actual) == expected
+
+
+# def test_filter_incomplete_transfers_excludes_pending_transfers():
+#     pending_transfer = build_transfer(error_code=15)
+#     transfers = [suppressed_transfer]
+#
+#     actual = filter_failed_transfers(transfers)
+#
+#     expected = [suppressed_transfer]
+#
+#     assert list(actual) == expected
